@@ -1,0 +1,28 @@
+apiVersion: v1
+data:
+  Corefile: |
+    .:53 {
+        forward . 8.8.8.8 8.8.4.4
+        log
+        errors
+        health :8080
+    }
+
+    lab.company.com:53 {
+        file /home/admin/coredns/config/db.lab.company.com
+        log
+        errors
+    }
+  db.lab.company.com: |
+    $ORIGIN lab.company.com.
+    @    IN    SOA    dns.lab.company.com    manager.company.com    2603151630    3600    60    3600    3600
+
+    dns  IN    A      172.17.0.1
+    ins1 IN    A      172.17.0.2
+    ins2 IN    A      172.17.0.3
+    ins3 IN    A      172.17.0.4
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: coredns
+  name: coredns-cm0

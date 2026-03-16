@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f compose.yaml
+    kompose.version: 1.38.0 (a8f5d1cbd)
+  labels:
+    io.kompose.service: coredns
+  name: coredns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: coredns
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f compose.yaml
+        kompose.version: 1.38.0 (a8f5d1cbd)
+      labels:
+        io.kompose.service: coredns
+    spec:
+      containers:
+        - args:
+            - -conf
+            - /home/admin/coredns/config/Corefile
+            - -dns.port
+            - "53"
+          image: coredns/coredns:latest
+          name: coredns
+          ports:
+            - containerPort: 53
+              protocol: TCP
+            - containerPort: 53
+              protocol: UDP
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/admin/coredns/config
+              name: coredns-cm0
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: coredns-cm0
+          name: coredns-cm0
