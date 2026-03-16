@@ -1,0 +1,12 @@
+.:53 {
+    forward . 8.8.8.8 8.8.4.4
+    log
+    errors
+    health :8080
+}
+
+lab.company.com:53 {
+    file /home/admin/coredns/config/db.lab.company.com
+    log
+    errors
+}

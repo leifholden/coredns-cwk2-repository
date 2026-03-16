@@ -1,0 +1,11 @@
+services:
+    coredns:
+        image: coredns/coredns:latest
+        container_name: coredns
+        command: -conf /home/admin/coredns/config/Corefile -dns.port 53
+        ports:
+            - "1053:53"
+            - "1053:53/udp"
+            - "8080:8080"
+        volumes:
+            - ~/coredns/config/:/home/admin/coredns/config/
