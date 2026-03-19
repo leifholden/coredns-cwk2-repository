@@ -8,13 +8,17 @@ metadata:
     io.kompose.service: coredns
   name: coredns
 spec:
+  type: LoadBalancer
+  selector:
+    io.kompose.service: coredns
   ports:
-    - name: "1053"
+    - name: dns-tcp
+      protocol: TCP
       port: 1053
       targetPort: 53
-    - name: 1053-udp
-      port: 1053
+    - name: dns-udp
       protocol: UDP
+      port: 1053
       targetPort: 53
     - name: "8080"
       port: 8080
