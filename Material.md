@@ -1,6 +1,6 @@
 # Use of Microsoft 365 Copilot with Enterprise Security
 
-The following table outlines how Microsoft 365 Copilot with Enterprise Security was used in an assistive role to help debug configuration issues. The table includes prompts, attachments, Copilot's responses, and how I have acted on Copilots responses.
+The following outlines how Microsoft 365 Copilot with Enterprise Security was used in an assistive role to help debug configuration issues.
 
 The Version of Microsoft 365 Copilot with Enterprise Security used was 2.20260317.17.0
 
@@ -216,6 +216,9 @@ Nothing’s wrong with CoreDNS itself—you just need to expose it. Change the S
 
 If you want, share your coredns-cm0-configmap.yaml and the Corefile content—I can sanity‑check the zone stanza and paths for you.
 
+# Actions taken for prompt 1
+I decided to implement option B. This solution worked as described.
+
 # Prompt 2
 
 I have decided to go for option B. Option B works when running 'dig @<EXTERNAL-IP> -p 1053 ins1.lab.company.com' however I would like to be able to access coredns by running 'dig @localhost -p 1053 ins1.lab.company.com'. What am I doing incorrectly and how can I resolve this issue?
@@ -362,3 +365,10 @@ It keeps your setup clean, avoids hostNetwork conflicts, and keeps full UDP DNS 
 If you want, I can generate the corrected YAML files for you.
 Just say:
 “Show me corrected Service and Deployment YAML”
+
+# Action taken from prompt 2
+I decided to partially implement Option 2. I decided against editing my coredns-service.yaml file and instead rely solely on the redirection facilities of the ```socat``` command. I used these two commands which allowed for the desired behavior:
+```
+sudo socat UDP-LISTEN:1053,fork UDP:<EXTERNAL-IP>:1053&
+sudo socat TCP-LISTEN:1053,fork TCP:<EXTERNAL-IP:1053&
+```
