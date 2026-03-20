@@ -216,5 +216,149 @@ Nothing’s wrong with CoreDNS itself—you just need to expose it. Change the S
 
 If you want, share your coredns-cm0-configmap.yaml and the Corefile content—I can sanity‑check the zone stanza and paths for you.
 
+# Prompt 2
 
+I have decided to go for option B. Option B works when running 'dig @<EXTERNAL-IP> -p 1053 ins1.lab.company.com' however I would like to be able to access coredns by running 'dig @localhost -p 1053 ins1.lab.company.com'. What am I doing incorrectly and how can I resolve this issue?
 
+# Attachment for prompt 2
+No Attachemnts
+
+# Copilot response to prompt 2
+
+Great — since Option B (LoadBalancer + minikube tunnel) is already working when you query using the external IP, the only remaining question is:
+- Why does dig @localhost -p 1053 … not work, and how can you make it work?
+Let’s break down what’s happening and exactly how to fix it.
+
+### ✅ Why dig @localhost -p 1053 does not work with a LoadBalancer
+When you use:
+```
+minikube tunnel
+```
+Minikube creates a virtual network interface and assigns the LoadBalancer Service an external IP.
+That external IP is not bound to 127.0.0.1 (localhost). It’s bound to the tunnel interface.
+
+So your LoadBalancer service is reachable here:
+```
+<EXTERNAL-IP>:1053
+```
+…but not on:
+```
+localhost:1053
+```
+This is expected behaviour: Kubernetes LoadBalancer Services do not bind to localhost.
+
+### ✅ How to make dig @localhost -p 1053 … work
+You have three valid options, depending on what you want.
+
+#### Option 1 (simple): Use a Minikube port‑forward from the Service
+Port‑forward binds directly to localhost.
+```
+kubectl port-forward svc/coredns 1053:1053 --address 127.0.0.1
+```
+Then this works exactly as you want:
+```
+dig @localhost -p 1053 ins1.lab.company.com
+```
+⚠️ Limitation
+kubectl port-forward only handles TCP, not UDP. This means:
+- dig +tcp works
+- but regular UDP DNS queries may not
+Example UDP‑less test:
+```
+dig +tcp @localhost -p 1053 ins1.lab.company.com
+```
+If you need UDP, choose Option 2 instead.
+
+### Option 2 (recommended for DNS): Add a NodePort in addition to LoadBalancer + map it manually
+
+You can keep your existing LoadBalancer for external access, and also expose a local NodePort.
+Edit your Service:
+```
+spec:
+  type: LoadBalancer
+  ports:
+    - name: dns-tcp
+      port: 1053
+      targetPort: 53
+      protocol: TCP
+      nodePort: 31053
+    - name: dns-udp
+      port: 1053
+      targetPort: 53
+      protocol: UDP
+      nodePort: 31053
+  selector:
+    io.kompose.service: coredns
+```
+Apply:
+```
+kubectl apply -f coredns-service.yaml
+```
+Get Minikube IP:
+```
+minikube ip
+```
+Then add a simple host NAT rule on your machine (Linux or macOS → works; Windows requires extra steps):
+
+Example (Linux):
+```
+sudo socat UDP-LISTEN:1053,fork UDP:$(minikube ip):31053 &
+sudo socat TCP-LISTEN:1053,fork TCP:$(minikube ip):31053 &
+```
+Now localhost:1053 forwards to Kubernetes NodePort.
+
+Test:
+```
+dig @localhost -p 1053 ins1.lab.company.com
+```
+This uses UDP, so it behaves like real DNS.
+
+### Option 3: Run CoreDNS with hostNetwork (binds directly to localhost)
+
+If you want CoreDNS literally running on your host’s network:
+
+Edit Deployment:
+```
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+```
+Then set CoreDNS to listen on 1053:
+
+Container args:
+```
+args:
+  - -conf
+  - /home/admin/coredns/config/Corefile
+  - -dns.port
+  - "1053"
+```
+After applying:
+```
+kubectl apply -f coredns-deployment.yaml
+```
+Now CoreDNS is directly reachable as:
+```
+dig @localhost -p 1053 ins1.lab.company.com
+```
+⚠️ Warning
+hostNetwork: true exposes the DNS server on your actual machine and may collide with:
+- systemd‑resolved
+- dnsmasq
+- any other local resolver
+Use this option only if you're comfortable with system‑wide DNS conflicts.
+
+### ⭐ Recommended Solution
+Since you want:
+✔ DNS using UDP
+✔ Access via localhost
+✔ Keep LoadBalancer working
+Use Option 2:
+Add a NodePort and forward localhost → NodePort using socat.
+It keeps your setup clean, avoids hostNetwork conflicts, and keeps full UDP DNS behaviour.
+
+If you want, I can generate the corrected YAML files for you.
+Just say:
+“Show me corrected Service and Deployment YAML”
