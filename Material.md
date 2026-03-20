@@ -19,8 +19,8 @@ Below I’ll explain what’s happening and give you three good ways to solve it
 
 ### Why dig @localhost -p 1053 works in Docker but not Minikube
 In Docker Compose you mapped host port 1053 to container port 53 directly:
-`
+```
 ports:
   - "1053:53"
   - "1053:53/udp"
-`
+```
